@@ -196,7 +196,7 @@ resource "coder_script" "amazon_q" {
 
     if [ "${var.experiment_report_tasks}" = "true" ]; then
       echo "Configuring Amazon Q to report tasks via Coder MCP..."
-      q mcp add coder --command "coder" --args "exp,mcp,server,--allowed-tools,coder_report_task" --env "CODER_MCP_APP_STATUS_SLUG=amazon-q"
+      q mcp add --name coder --command "coder" --args "exp,mcp,server,--allowed-tools,coder_report_task" --env "CODER_MCP_APP_STATUS_SLUG=amazon-q"
       echo "Added Coder MCP server to Amazon Q configuration"
     fi
 
