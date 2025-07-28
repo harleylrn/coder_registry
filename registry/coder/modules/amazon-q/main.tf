@@ -191,119 +191,101 @@ locals {
 
     if [ "$ARG_INSTALL_AMAZON_Q" = "true" ]; then
       echo "Installing Amazon Q..."
-      PREV_DIR="$PWD"
-      TMP_DIR="$(mktemp -d)"
-      cd "$TMP_DIR"
+      
+      # Check if already installed
+      if command_exists q; then
+        echo "Amazon Q already installed: $(q --version)"
+      else
+        PREV_DIR="$PWD"
+        TMP_DIR="$(mktemp -d)"
+        cd "$TMP_DIR"
 
-      ARCH="$(uname -m)"
-      case "$ARCH" in
-        "x86_64")
-          Q_URL="https://desktop-release.q.us-east-1.amazonaws.com/$ARG_AMAZON_Q_VERSION/q-x86_64-linux.zip"
-          ;;
-        "aarch64"|"arm64")
-          Q_URL="https://desktop-release.codewhisperer.us-east-1.amazonaws.com/$ARG_AMAZON_Q_VERSION/q-aarch64-linux.zip"
-          ;;
-        *)
-          echo "Error: Unsupported architecture: $ARCH. Amazon Q only supports x86_64 and arm64."
+        ARCH="$(uname -m)"
+        case "$ARCH" in
+          "x86_64")
+            Q_URL="https://desktop-release.q.us-east-1.amazonaws.com/$ARG_AMAZON_Q_VERSION/q-x86_64-linux.zip"
+            ;;
+          "aarch64"|"arm64")
+            Q_URL="https://desktop-release.codewhisperer.us-east-1.amazonaws.com/$ARG_AMAZON_Q_VERSION/q-aarch64-linux.zip"
+            ;;
+          *)
+            echo "Error: Unsupported architecture: $ARCH. Amazon Q only supports x86_64 and arm64."
+            exit 1
+            ;;
+        esac
+
+        echo "Downloading Amazon Q for $ARCH from $Q_URL..."
+        if ! curl --proto '=https' --tlsv1.2 -sSf "$Q_URL" -o "q.zip"; then
+          echo "Error: Failed to download Amazon Q"
           exit 1
-          ;;
-      esac
-
-      echo "Downloading Amazon Q for $ARCH..."
-      curl --proto '=https' --tlsv1.2 -sSf "$Q_URL" -o "q.zip"
-      unzip q.zip
-      ./q/install.sh --no-confirm
-      cd "$PREV_DIR"
-      export PATH="$PATH:$HOME/.local/bin"
-      echo "Installed Amazon Q version: $(q --version)"
+        fi
+        
+        if ! unzip -q q.zip; then
+          echo "Error: Failed to extract Amazon Q"
+          exit 1
+        fi
+        
+        if [ ! -f "./q/install.sh" ]; then
+          echo "Error: Amazon Q installer not found"
+          exit 1
+        fi
+        
+        chmod +x ./q/install.sh
+        if ! ./q/install.sh --no-confirm; then
+          echo "Error: Amazon Q installation failed"
+          exit 1
+        fi
+        
+        cd "$PREV_DIR"
+        rm -rf "$TMP_DIR"
+        
+        # Ensure PATH includes Amazon Q
+        export PATH="$PATH:$HOME/.local/bin"
+        
+        # Verify installation
+        if command_exists q; then
+          echo "Successfully installed Amazon Q version: $(q --version)"
+        else
+          echo "Error: Amazon Q installation verification failed"
+          exit 1
+        fi
+      fi
     fi
 
     echo "Extracting auth tarball..."
-    PREV_DIR="$PWD"
-    echo "$ARG_AUTH_TARBALL" | base64 -d > /tmp/auth.tar.zst
-    rm -rf ~/.local/share/amazon-q
-    mkdir -p ~/.local/share/amazon-q
-    cd ~/.local/share/amazon-q
-    tar -I zstd -xf /tmp/auth.tar.zst
-    rm /tmp/auth.tar.zst
-    cd "$PREV_DIR"
-    echo "Extracted auth tarball"
+    if [ -n "$ARG_AUTH_TARBALL" ] && [ "$ARG_AUTH_TARBALL" != "tarball" ]; then
+      PREV_DIR="$PWD"
+      echo "$ARG_AUTH_TARBALL" | base64 -d > /tmp/auth.tar.zst
+      rm -rf ~/.local/share/amazon-q
+      mkdir -p ~/.local/share/amazon-q
+      cd ~/.local/share/amazon-q
+      if ! tar -I zstd -xf /tmp/auth.tar.zst; then
+        echo "Error: Failed to extract auth tarball"
+        exit 1
+      fi
+      rm /tmp/auth.tar.zst
+      cd "$PREV_DIR"
+      echo "Successfully extracted auth tarball"
+    else
+      echo "Warning: No valid auth tarball provided"
+    fi
 
     if [ "$ARG_REPORT_TASKS" = "true" ]; then
       echo "Configuring Amazon Q to report tasks via Coder MCP..."
-      q mcp add --name coder --command "coder" --args "exp,mcp,server,--allowed-tools,coder_report_task" --env "CODER_MCP_APP_STATUS_SLUG=amazon-q,CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" --scope global --force
-      echo "Added Coder MCP server to Amazon Q configuration"
-    fi
-
-    if [ "$ARG_USE_TMUX" = "true" ] && [ "$ARG_USE_SCREEN" = "true" ]; then
-      echo "Error: Both use_tmux and use_screen cannot be true simultaneously."
-      echo "Please set only one of them to true."
-      exit 1
-    fi
-
-    if [ "$ARG_USE_TMUX" = "true" ]; then
-      echo "Running Amazon Q in the background with tmux..."
-
-      if ! command_exists tmux; then
-        echo "Error: tmux is not installed. Please install tmux manually."
-        exit 1
-      fi
-
-      touch "$HOME/.amazon-q.log"
-
-      export LANG=en_US.UTF-8
-      export LC_ALL=en_US.UTF-8
-
-      tmux new-session -d -s amazon-q -c "$ARG_FOLDER" "q chat --trust-all-tools | tee -a \"$HOME/.amazon-q.log\" && exec bash"
-
-      if [ -n "$ARG_AI_PROMPT" ]; then
-        tmux send-keys -t amazon-q "$ARG_AI_PROMPT"
-        sleep 5
-        tmux send-keys -t amazon-q Enter
+      if command_exists q; then
+        q mcp add --name coder --command "coder" --args "exp,mcp,server,--allowed-tools,coder_report_task" --env "CODER_MCP_APP_STATUS_SLUG=amazon-q,CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" --scope global --force || echo "Warning: Failed to configure MCP"
+        echo "Added Coder MCP server to Amazon Q configuration"
+      else
+        echo "Warning: Cannot configure MCP - Amazon Q not available"
       fi
     fi
 
-    if [ "$ARG_USE_SCREEN" = "true" ]; then
-      echo "Running Amazon Q in the background..."
-
-      if ! command_exists screen; then
-        echo "Error: screen is not installed. Please install screen manually."
-        exit 1
-      fi
-
-      touch "$HOME/.amazon-q.log"
-
-      if [ ! -f "$HOME/.screenrc" ]; then
-        echo "Creating ~/.screenrc and adding multiuser settings..." | tee -a "$HOME/.amazon-q.log"
-        echo -e "multiuser on\\nacladd $(whoami)" > "$HOME/.screenrc"
-      fi
-
-      if ! grep -q "^multiuser on$" "$HOME/.screenrc"; then
-        echo "Adding 'multiuser on' to ~/.screenrc..." | tee -a "$HOME/.amazon-q.log"
-        echo "multiuser on" >> "$HOME/.screenrc"
-      fi
-
-      if ! grep -q "^acladd $(whoami)$" "$HOME/.screenrc"; then
-        echo "Adding 'acladd $(whoami)' to ~/.screenrc..." | tee -a "$HOME/.amazon-q.log"
-        echo "acladd $(whoami)" >> "$HOME/.screenrc"
-      fi
-      export LANG=en_US.UTF-8
-      export LC_ALL=en_US.UTF-8
-
-      screen -U -dmS amazon-q bash -c "
-        cd $ARG_FOLDER
-        q chat --trust-all-tools | tee -a \"$HOME/.amazon-q.log\"
-        exec bash
-      "
-      
-      if [ -n "$ARG_AI_PROMPT" ]; then
-        # Send the prompt to the screen session
-        screen -S amazon-q -X stuff "$ARG_AI_PROMPT"
-        sleep 5
-        screen -S amazon-q -X stuff "^M"
-      fi
-    fi
+    # Ensure Amazon Q is in PATH for AgentAPI
+    echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
+    
+    echo "Amazon Q setup completed successfully"
   EOT
+
 }
 
 module "agentapi" {
