@@ -179,7 +179,7 @@ locals {
         echo "Starting without a prompt"
     fi
 
-        agentapi server --term-width 67 --term-height 1190 -- tmux new-session -s amazon-q -c /home/coder \"\$Q_CMD \$Q_ARGS \${Q_AI_PROMPT}\"
+        agentapi server --term-width 67 --term-height 1190 -- tmux new-session -s amazon-q -c /home/coder \"\$Q_CMD \$Q_ARGS \$Q_AI_PROMPT\"
 
     # # If tmux or screen is enabled, handle session management within agentapi
     # if [ "${var.use_tmux}" = "true" ]; then
