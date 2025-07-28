@@ -188,7 +188,7 @@ locals {
                 tmux attach-session -t amazon-q; \
             else \
                 echo 'Starting new Amazon Q tmux session...'; \
-                tmux new-session -s amazon-q -c ${var.folder} \"$(printf '%q ' \"$Q_CMD\" \"${Q_ARGS[@]}\")\"; \
+                tmux new-session -s amazon-q -c ${var.folder} \"\$Q_CMD \$${Q_ARGS[*]}\"; \
             fi"
     elif [ "${var.use_screen}" = "true" ]; then
         echo "Using screen session management"
@@ -199,13 +199,13 @@ locals {
                 screen -xRR amazon-q; \
             else \
                 echo 'Starting new Amazon Q screen session...'; \
-                screen -S amazon-q bash -c 'cd ${var.folder} && $(printf '%q ' \"$Q_CMD\" \"${Q_ARGS[@]}\")'; \
+                screen -S amazon-q bash -c 'cd ${var.folder} && \$Q_CMD \$${Q_ARGS[*]}'; \
             fi"
     else
         echo "Starting Amazon Q directly through agentapi server"
         # Run agentapi server with Amazon Q directly - similar to goose module
         agentapi server --term-width 67 --term-height 1190 -- \
-            bash -c "$(printf '%q ' \"$Q_CMD\" \"${Q_ARGS[@]}\")"
+            bash -c "\$Q_CMD \$${Q_ARGS[*]}"
     fi
   EOT
 
