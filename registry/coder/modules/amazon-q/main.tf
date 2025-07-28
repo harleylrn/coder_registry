@@ -167,7 +167,8 @@ locals {
     # Prepare Amazon Q arguments
     Q_ARGS=(chat --trust-all-tools)
 
-    Q_AI_PROMPT="${var.system_prompt}\n${var.ai_prompt}"
+    Q_AI_PROMPT="${var.system_prompt}
+                 ${var.ai_prompt}"
     # If we have an AI prompt, prepare it
     if [ ! -z "$Q_AI_PROMPT" ]; then
         echo "Starting with a prompt: $Q_AI_PROMPT"
@@ -179,7 +180,7 @@ locals {
         echo "Starting without a prompt"
     fi
 
-        agentapi server --term-width 67 --term-height 1190 -- tmux new-session -s amazon-q -c /home/coder \"\$Q_CMD \$Q_ARGS \$Q_AI_PROMPT\"
+        agentapi server --term-width 67 --term-height 1190 -- "\$Q_CMD \$Q_ARGS \$Q_AI_PROMPT\"
 
     # # If tmux or screen is enabled, handle session management within agentapi
     # if [ "${var.use_tmux}" = "true" ]; then
