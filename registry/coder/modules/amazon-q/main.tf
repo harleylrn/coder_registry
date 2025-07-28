@@ -137,7 +137,7 @@ variable "ai_prompt" {
 locals {
   app_slug        = "amazon-q"
   module_dir_name = ".amazon-q-module"
-  
+
   # Create the start script for Amazon Q - similar to goose module
   start_script = <<-EOT
     #!/bin/bash
@@ -167,6 +167,7 @@ locals {
     # Prepare Amazon Q arguments
     Q_ARGS=(chat --trust-all-tools)
 
+    Q_AI_PROMPT="${var.system_prompt}\n${var.ai_prompt}"
     # If we have an AI prompt, prepare it
     if [ ! -z "$Q_AI_PROMPT" ]; then
         echo "Starting with a prompt: $Q_AI_PROMPT"
@@ -178,38 +179,40 @@ locals {
         echo "Starting without a prompt"
     fi
 
-    # If tmux or screen is enabled, handle session management within agentapi
-    if [ "${var.use_tmux}" = "true" ]; then
-        echo "Using tmux session management"
-        # Run agentapi server with tmux session for Amazon Q
-        agentapi server --term-width 67 --term-height 1190 -- \
-            bash -c "if tmux has-session -t amazon-q 2>/dev/null; then \
-                echo 'Attaching to existing Amazon Q tmux session...'; \
-                tmux attach-session -t amazon-q; \
-            else \
-                echo 'Starting new Amazon Q tmux session...'; \
-                tmux new-session -s amazon-q -c ${var.folder} \"\$Q_CMD \$${Q_ARGS[*]}\"; \
-            fi"
-    elif [ "${var.use_screen}" = "true" ]; then
-        echo "Using screen session management"
-        # Run agentapi server with screen session for Amazon Q
-        agentapi server --term-width 67 --term-height 1190 -- \
-            bash -c "if screen -list | grep -q 'amazon-q'; then \
-                echo 'Attaching to existing Amazon Q screen session...'; \
-                screen -xRR amazon-q; \
-            else \
-                echo 'Starting new Amazon Q screen session...'; \
-                screen -S amazon-q bash -c 'cd ${var.folder} && \$Q_CMD \$${Q_ARGS[*]}'; \
-            fi"
-    else
-        echo "Starting Amazon Q directly through agentapi server"
-        # Run agentapi server with Amazon Q directly - similar to goose module
-        agentapi server --term-width 67 --term-height 1190 -- \
-            bash -c "\$Q_CMD \$${Q_ARGS[*]}"
-    fi
+        agentapi server --term-width 67 --term-height 1190 -- tmux new-session -s amazon-q -c /home/coder \"\$Q_CMD \${Q_ARGS[*]} \${Q_AI_PROMPT}\"
+
+    # # If tmux or screen is enabled, handle session management within agentapi
+    # if [ "${var.use_tmux}" = "true" ]; then
+    #     echo "Using tmux session management"
+    #     # Run agentapi server with tmux session for Amazon Q
+    #     agentapi server --term-width 67 --term-height 1190 -- \
+    #         bash -c "if tmux has-session -t amazon-q 2>/dev/null; then \
+    #             echo 'Attaching to existing Amazon Q tmux session...'; \
+    #             tmux attach-session -t amazon-q; \
+    #         else \
+    #             echo 'Starting new Amazon Q tmux session...'; \
+    #             tmux new-session -s amazon-q -c ${var.folder} \"\$Q_CMD \$${Q_ARGS[*]}\"; \
+    #         fi"
+    # elif [ "${var.use_screen}" = "true" ]; then
+    #     echo "Using screen session management"
+    #     # Run agentapi server with screen session for Amazon Q
+    #     agentapi server --term-width 67 --term-height 1190 -- \
+    #         bash -c "if screen -list | grep -q 'amazon-q'; then \
+    #             echo 'Attaching to existing Amazon Q screen session...'; \
+    #             screen -xRR amazon-q; \
+    #         else \
+    #             echo 'Starting new Amazon Q screen session...'; \
+    #             screen -S amazon-q bash -c 'cd ${var.folder} && \$Q_CMD \$${Q_ARGS[*]}'; \
+    #         fi"
+    # else
+    #     echo "Starting Amazon Q directly through agentapi server"
+    #     # Run agentapi server with Amazon Q directly - similar to goose module
+    #     agentapi server --term-width 67 --term-height 1190 -- \
+    #         bash -c "\$Q_CMD \$${Q_ARGS[*]}"
+    # fi
   EOT
 
-  
+
   # Create the install script for Amazon Q
   install_script = <<-EOT
     #!/bin/bash
