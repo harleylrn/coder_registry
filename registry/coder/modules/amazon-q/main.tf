@@ -154,9 +154,30 @@ locals {
       exit 1
     fi
     
-    # Start Amazon Q chat with trust all tools
-    q chat --trust-all-tools
+    # If tmux or screen is enabled, attach to existing session or start new one
+    if [ "${var.use_tmux}" = "true" ]; then
+      if tmux has-session -t amazon-q 2>/dev/null; then
+        echo "Attaching to existing Amazon Q tmux session..."
+        exec tmux attach-session -t amazon-q
+      else
+        echo "Starting new Amazon Q tmux session..."
+        exec tmux new-session -s amazon-q -c ${var.folder} "q chat --trust-all-tools"
+      fi
+    elif [ "${var.use_screen}" = "true" ]; then
+      if screen -list | grep -q "amazon-q"; then
+        echo "Attaching to existing Amazon Q screen session..."
+        exec screen -xRR amazon-q
+      else
+        echo "Starting new Amazon Q screen session..."
+        exec screen -S amazon-q bash -c 'cd ${var.folder} && q chat --trust-all-tools'
+      fi
+    else
+      # Direct execution for AgentAPI
+      echo "Starting Amazon Q chat..."
+      exec q chat --trust-all-tools
+    fi
   EOT
+
   
   # Create the install script for Amazon Q
   install_script = <<-EOT
