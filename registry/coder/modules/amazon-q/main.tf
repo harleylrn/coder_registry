@@ -138,43 +138,74 @@ locals {
   app_slug        = "amazon-q"
   module_dir_name = ".amazon-q-module"
   
-  # Create the start script for Amazon Q
+  # Create the start script for Amazon Q - similar to goose module
   start_script = <<-EOT
     #!/bin/bash
-    set -e
-    
-    export LANG=en_US.UTF-8
-    export LC_ALL=en_US.UTF-8
-    
-    cd ${var.folder}
-    
+    set -o errexit
+    set -o pipefail
+
+    command_exists() {
+        command -v "$1" >/dev/null 2>&1
+    }
+
     # Check if Amazon Q is installed
-    if ! command -v q >/dev/null 2>&1; then
-      echo "Error: Amazon Q is not installed. Please enable install_amazon_q or install it manually."
-      exit 1
-    fi
-    
-    # If tmux or screen is enabled, attach to existing session or start new one
-    if [ "${var.use_tmux}" = "true" ]; then
-      if tmux has-session -t amazon-q 2>/dev/null; then
-        echo "Attaching to existing Amazon Q tmux session..."
-        exec tmux attach-session -t amazon-q
-      else
-        echo "Starting new Amazon Q tmux session..."
-        exec tmux new-session -s amazon-q -c ${var.folder} "q chat --trust-all-tools"
-      fi
-    elif [ "${var.use_screen}" = "true" ]; then
-      if screen -list | grep -q "amazon-q"; then
-        echo "Attaching to existing Amazon Q screen session..."
-        exec screen -xRR amazon-q
-      else
-        echo "Starting new Amazon Q screen session..."
-        exec screen -S amazon-q bash -c 'cd ${var.folder} && q chat --trust-all-tools'
-      fi
+    if command_exists q; then
+        Q_CMD=q
+    elif [ -f "$HOME/.local/bin/q" ]; then
+        Q_CMD="$HOME/.local/bin/q"
     else
-      # Direct execution for AgentAPI
-      echo "Starting Amazon Q chat..."
-      exec q chat --trust-all-tools
+        echo "Error: Amazon Q is not installed. Please enable install_amazon_q or install it manually."
+        exit 1
+    fi
+
+    # this must be kept up to date with main.tf
+    MODULE_DIR="$HOME/${local.module_dir_name}"
+    mkdir -p "$MODULE_DIR"
+
+    cd ${var.folder}
+
+    # Prepare Amazon Q arguments
+    Q_ARGS=(chat --trust-all-tools)
+
+    # If we have an AI prompt, prepare it
+    if [ ! -z "$Q_AI_PROMPT" ]; then
+        echo "Starting with a prompt: $Q_AI_PROMPT"
+        PROMPT_FILE="$MODULE_DIR/prompt.txt"
+        echo -n "$Q_AI_PROMPT" > "$PROMPT_FILE"
+        # Amazon Q doesn't have the same prompt file structure as goose, so we'll pass it differently
+        # For now, we'll start normally and the prompt will be handled by the AI task
+    else
+        echo "Starting without a prompt"
+    fi
+
+    # If tmux or screen is enabled, handle session management within agentapi
+    if [ "${var.use_tmux}" = "true" ]; then
+        echo "Using tmux session management"
+        # Run agentapi server with tmux session for Amazon Q
+        agentapi server --term-width 67 --term-height 1190 -- \
+            bash -c "if tmux has-session -t amazon-q 2>/dev/null; then \
+                echo 'Attaching to existing Amazon Q tmux session...'; \
+                tmux attach-session -t amazon-q; \
+            else \
+                echo 'Starting new Amazon Q tmux session...'; \
+                tmux new-session -s amazon-q -c ${var.folder} \"$(printf '%q ' \"$Q_CMD\" \"${Q_ARGS[@]}\")\"; \
+            fi"
+    elif [ "${var.use_screen}" = "true" ]; then
+        echo "Using screen session management"
+        # Run agentapi server with screen session for Amazon Q
+        agentapi server --term-width 67 --term-height 1190 -- \
+            bash -c "if screen -list | grep -q 'amazon-q'; then \
+                echo 'Attaching to existing Amazon Q screen session...'; \
+                screen -xRR amazon-q; \
+            else \
+                echo 'Starting new Amazon Q screen session...'; \
+                screen -S amazon-q bash -c 'cd ${var.folder} && $(printf '%q ' \"$Q_CMD\" \"${Q_ARGS[@]}\")'; \
+            fi"
+    else
+        echo "Starting Amazon Q directly through agentapi server"
+        # Run agentapi server with Amazon Q directly - similar to goose module
+        agentapi server --term-width 67 --term-height 1190 -- \
+            bash -c "$(printf '%q ' \"$Q_CMD\" \"${Q_ARGS[@]}\")"
     fi
   EOT
 
