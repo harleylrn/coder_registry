@@ -4,7 +4,7 @@ terraform {
   required_providers {
     coder = {
       source  = "coder/coder"
-      version = ">= 2.7"
+      version = ">= 2.5"
     }
   }
 }
@@ -54,49 +54,37 @@ variable "amazon_q_version" {
   default     = "latest"
 }
 
-variable "install_agentapi" {
-  type        = bool
-  description = "Whether to install AgentAPI."
-  default     = true
-}
-
-variable "agentapi_version" {
-  type        = string
-  description = "The version of AgentAPI to install."
-  default     = "v0.2.3"
-}
-
-variable "use_screen" {
+variable "experiment_use_screen" {
   type        = bool
   description = "Whether to use screen for running Amazon Q in the background."
   default     = false
 }
 
-variable "use_tmux" {
+variable "experiment_use_tmux" {
   type        = bool
   description = "Whether to use tmux instead of screen for running Amazon Q in the background."
   default     = false
 }
 
-variable "report_tasks" {
+variable "experiment_report_tasks" {
   type        = bool
   description = "Whether to enable task reporting."
   default     = false
 }
 
-variable "pre_install_script" {
+variable "experiment_pre_install_script" {
   type        = string
   description = "Custom script to run before installing Amazon Q."
   default     = null
 }
 
-variable "post_install_script" {
+variable "experiment_post_install_script" {
   type        = string
   description = "Custom script to run after installing Amazon Q."
   default     = null
 }
 
-variable "auth_tarball" {
+variable "experiment_auth_tarball" {
   type        = string
   description = "Base64 encoded, zstd compressed tarball of a pre-authenticated ~/.local/share/amazon-q directory. After running `q login` on another machine, you may generate it with: `cd ~/.local/share/amazon-q && tar -c . | zstd | base64 -w 0`"
   default     = "tarball"
@@ -135,31 +123,22 @@ variable "ai_prompt" {
 }
 
 locals {
-  app_slug        = "amazon-q"
-  module_dir_name = ".amazon-q-module"
-  
-  # Create the start script for Amazon Q
-  start_script = <<-EOT
-    #!/bin/bash
-    set -e
-    
-    export LANG=en_US.UTF-8
-    export LC_ALL=en_US.UTF-8
-    
-    cd ${var.folder}
-    
-    # Check if Amazon Q is installed
-    if ! command -v q >/dev/null 2>&1; then
-      echo "Error: Amazon Q is not installed. Please enable install_amazon_q or install it manually."
-      exit 1
-    fi
-    
-    # Start Amazon Q chat with trust all tools
-    q chat --trust-all-tools
+  encoded_pre_install_script  = var.experiment_pre_install_script != null ? base64encode(var.experiment_pre_install_script) : ""
+  encoded_post_install_script = var.experiment_post_install_script != null ? base64encode(var.experiment_post_install_script) : ""
+  full_prompt                 = <<-EOT
+    ${var.system_prompt}
+
+    Your first task is:
+
+    ${var.ai_prompt}
   EOT
-  
-  # Create the install script for Amazon Q
-  install_script = <<-EOT
+}
+
+resource "coder_script" "amazon_q" {
+  agent_id     = var.agent_id
+  display_name = "Amazon Q"
+  icon         = var.icon
+  script       = <<-EOT
     #!/bin/bash
     set -o errexit
     set -o pipefail
@@ -168,7 +147,14 @@ locals {
       command -v "$1" >/dev/null 2>&1
     }
 
-    if [ "$ARG_INSTALL_AMAZON_Q" = "true" ]; then
+    if [ -n "${local.encoded_pre_install_script}" ]; then
+      echo "Running pre-install script..."
+      echo "${local.encoded_pre_install_script}" | base64 -d > /tmp/pre_install.sh
+      chmod +x /tmp/pre_install.sh
+      /tmp/pre_install.sh
+    fi
+
+    if [ "${var.install_amazon_q}" = "true" ]; then
       echo "Installing Amazon Q..."
       PREV_DIR="$PWD"
       TMP_DIR="$(mktemp -d)"
@@ -177,10 +163,10 @@ locals {
       ARCH="$(uname -m)"
       case "$ARCH" in
         "x86_64")
-          Q_URL="https://desktop-release.q.us-east-1.amazonaws.com/$ARG_AMAZON_Q_VERSION/q-x86_64-linux.zip"
+          Q_URL="https://desktop-release.q.us-east-1.amazonaws.com/${var.amazon_q_version}/q-x86_64-linux.zip"
           ;;
         "aarch64"|"arm64")
-          Q_URL="https://desktop-release.codewhisperer.us-east-1.amazonaws.com/$ARG_AMAZON_Q_VERSION/q-aarch64-linux.zip"
+          Q_URL="https://desktop-release.codewhisperer.us-east-1.amazonaws.com/${var.amazon_q_version}/q-aarch64-linux.zip"
           ;;
         *)
           echo "Error: Unsupported architecture: $ARCH. Amazon Q only supports x86_64 and arm64."
@@ -199,7 +185,7 @@ locals {
 
     echo "Extracting auth tarball..."
     PREV_DIR="$PWD"
-    echo "$ARG_AUTH_TARBALL" | base64 -d > /tmp/auth.tar.zst
+    echo "${var.experiment_auth_tarball}" | base64 -d > /tmp/auth.tar.zst
     rm -rf ~/.local/share/amazon-q
     mkdir -p ~/.local/share/amazon-q
     cd ~/.local/share/amazon-q
@@ -208,19 +194,26 @@ locals {
     cd "$PREV_DIR"
     echo "Extracted auth tarball"
 
-    if [ "$ARG_REPORT_TASKS" = "true" ]; then
+    if [ "${var.experiment_report_tasks}" = "true" ]; then
       echo "Configuring Amazon Q to report tasks via Coder MCP..."
-      q mcp add --name coder --command "coder" --args "exp,mcp,server,--allowed-tools,coder_report_task" --env "CODER_MCP_APP_STATUS_SLUG=amazon-q,CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" --scope global --force
+      q mcp add --name coder --command "coder" --args "exp,mcp,server,--allowed-tools,coder_report_task" --env "CODER_MCP_APP_STATUS_SLUG=amazon-q" --scope global --force
       echo "Added Coder MCP server to Amazon Q configuration"
     fi
 
-    if [ "$ARG_USE_TMUX" = "true" ] && [ "$ARG_USE_SCREEN" = "true" ]; then
-      echo "Error: Both use_tmux and use_screen cannot be true simultaneously."
+    if [ -n "${local.encoded_post_install_script}" ]; then
+      echo "Running post-install script..."
+      echo "${local.encoded_post_install_script}" | base64 -d > /tmp/post_install.sh
+      chmod +x /tmp/post_install.sh
+      /tmp/post_install.sh
+    fi
+
+    if [ "${var.experiment_use_tmux}" = "true" ] && [ "${var.experiment_use_screen}" = "true" ]; then
+      echo "Error: Both experiment_use_tmux and experiment_use_screen cannot be true simultaneously."
       echo "Please set only one of them to true."
       exit 1
     fi
 
-    if [ "$ARG_USE_TMUX" = "true" ]; then
+    if [ "${var.experiment_use_tmux}" = "true" ]; then
       echo "Running Amazon Q in the background with tmux..."
 
       if ! command_exists tmux; then
@@ -233,16 +226,14 @@ locals {
       export LANG=en_US.UTF-8
       export LC_ALL=en_US.UTF-8
 
-      tmux new-session -d -s amazon-q -c "$ARG_FOLDER" "q chat --trust-all-tools | tee -a \"$HOME/.amazon-q.log\" && exec bash"
+      tmux new-session -d -s amazon-q -c "${var.folder}" "q chat --trust-all-tools | tee -a "$HOME/.amazon-q.log" && exec bash"
 
-      if [ -n "$ARG_AI_PROMPT" ]; then
-        tmux send-keys -t amazon-q "$ARG_AI_PROMPT"
-        sleep 5
-        tmux send-keys -t amazon-q Enter
-      fi
+      tmux send-keys -t amazon-q "${local.full_prompt}"
+      sleep 5
+      tmux send-keys -t amazon-q Enter
     fi
 
-    if [ "$ARG_USE_SCREEN" = "true" ]; then
+    if [ "${var.experiment_use_screen}" = "true" ]; then
       echo "Running Amazon Q in the background..."
 
       if ! command_exists screen; then
@@ -254,7 +245,7 @@ locals {
 
       if [ ! -f "$HOME/.screenrc" ]; then
         echo "Creating ~/.screenrc and adding multiuser settings..." | tee -a "$HOME/.amazon-q.log"
-        echo -e "multiuser on\\nacladd $(whoami)" > "$HOME/.screenrc"
+        echo -e "multiuser on\nacladd $(whoami)" > "$HOME/.screenrc"
       fi
 
       if ! grep -q "^multiuser on$" "$HOME/.screenrc"; then
@@ -269,58 +260,60 @@ locals {
       export LANG=en_US.UTF-8
       export LC_ALL=en_US.UTF-8
 
-      screen -U -dmS amazon-q bash -c "
-        cd $ARG_FOLDER
-        q chat --trust-all-tools | tee -a \"$HOME/.amazon-q.log\"
+      screen -U -dmS amazon-q bash -c '
+        cd ${var.folder}
+        q chat --trust-all-tools | tee -a "$HOME/.amazon-q.log
         exec bash
-      "
-      
-      if [ -n "$ARG_AI_PROMPT" ]; then
-        # Send the prompt to the screen session
-        screen -S amazon-q -X stuff "$ARG_AI_PROMPT"
-        sleep 5
-        screen -S amazon-q -X stuff "^M"
+      '
+      # Extremely hacky way to send the prompt to the screen session
+      # This will be fixed in the future, but `amazon-q` was not sending MCP
+      # tasks when an initial prompt is provided.
+      screen -S amazon-q -X stuff "${local.full_prompt}"
+      sleep 5
+      screen -S amazon-q -X stuff "^M"
+    else
+      if ! command_exists q; then
+        echo "Error: Amazon Q is not installed. Please enable install_amazon_q or install it manually."
+        exit 1
       fi
     fi
-  EOT
+    EOT
+  run_on_start = true
 }
 
-module "agentapi" {
-  source  = "registry.coder.com/coder/agentapi/coder"
-  version = "1.0.0"
-
-  agent_id             = var.agent_id
-  web_app_slug         = local.app_slug
-  web_app_order        = var.order
-  web_app_group        = var.group
-  web_app_icon         = var.icon
-  web_app_display_name = "Amazon Q"
-  cli_app              = true
-  cli_app_slug         = "${local.app_slug}-cli"
-  cli_app_display_name = "Amazon Q CLI"
-  cli_app_icon         = var.icon
-  module_dir_name      = local.module_dir_name
-  install_agentapi     = var.install_agentapi
-  agentapi_version     = var.agentapi_version
-  pre_install_script   = var.pre_install_script
-  post_install_script  = var.post_install_script
-  start_script         = local.start_script
-  install_script       = <<-EOT
+resource "coder_app" "amazon_q" {
+  slug         = "amazon-q"
+  display_name = "Amazon Q"
+  agent_id     = var.agent_id
+  command      = <<-EOT
     #!/bin/bash
-    set -o errexit
-    set -o pipefail
+    set -e
 
-    echo -n '${base64encode(local.install_script)}' | base64 -d > /tmp/install.sh
-    chmod +x /tmp/install.sh
+    export LANG=en_US.UTF-8
+    export LC_ALL=en_US.UTF-8
 
-    ARG_INSTALL_AMAZON_Q='${var.install_amazon_q}' \
-    ARG_AMAZON_Q_VERSION='${var.amazon_q_version}' \
-    ARG_AUTH_TARBALL='${var.auth_tarball}' \
-    ARG_REPORT_TASKS='${var.report_tasks}' \
-    ARG_USE_TMUX='${var.use_tmux}' \
-    ARG_USE_SCREEN='${var.use_screen}' \
-    ARG_FOLDER='${var.folder}' \
-    ARG_AI_PROMPT='${var.ai_prompt}' \
-    /tmp/install.sh
-  EOT
+    if [ "${var.experiment_use_tmux}" = "true" ]; then
+      if tmux has-session -t amazon-q 2>/dev/null; then
+        echo "Attaching to existing Amazon Q tmux session." | tee -a "$HOME/.amazon-q.log"
+        tmux attach-session -t amazon-q
+      else
+        echo "Starting a new Amazon Q tmux session." | tee -a "$HOME/.amazon-q.log"
+        tmux new-session -s amazon-q -c ${var.folder} "q chat --trust-all-tools | tee -a \"$HOME/.amazon-q.log\"; exec bash"
+      fi
+    elif [ "${var.experiment_use_screen}" = "true" ]; then
+      if screen -list | grep -q "amazon-q"; then
+        echo "Attaching to existing Amazon Q screen session." | tee -a "$HOME/.amazon-q.log"
+        screen -xRR amazon-q
+      else
+        echo "Starting a new Amazon Q screen session." | tee -a "$HOME/.amazon-q.log"
+        screen -S amazon-q bash -c 'q chat --trust-all-tools | tee -a "$HOME/.amazon-q.log"; exec bash'
+      fi
+    else
+      cd ${var.folder}
+      q chat --trust-all-tools
+    fi
+    EOT
+  icon         = var.icon
+  order        = var.order
+  group        = var.group
 }
