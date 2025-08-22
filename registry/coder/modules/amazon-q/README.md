@@ -57,22 +57,27 @@ Copy the output and use it as the `auth_tarball` variable.
 <summary><strong>Detailed Authentication Setup</strong></summary>
 
 **Step 1: Install Amazon Q locally**
+
 - Download from [AWS Amazon Q Developer](https://aws.amazon.com/q/developer/)
 - Follow the installation instructions for your platform
 
 **Step 2: Authenticate**
+
 ```bash
 q login
 ```
+
 Complete the authentication process in your browser.
 
 **Step 3: Generate tarball**
+
 ```bash
 cd ~/.local/share/amazon-q
 tar -c . | zstd | base64 -w 0 > /tmp/amazon-q-auth.txt
 ```
 
 **Step 4: Use in Terraform**
+
 ```tf
 variable "amazon_q_auth_tarball" {
   type      = string
@@ -82,6 +87,7 @@ variable "amazon_q_auth_tarball" {
 ```
 
 **Important Notes:**
+
 - Regenerate the tarball if you logout or re-authenticate
 - Each user needs their own authentication tarball
 - Keep the tarball secure as it contains authentication credentials
@@ -92,38 +98,39 @@ variable "amazon_q_auth_tarball" {
 
 ### Required Variables
 
-| Variable | Type | Description |
-|----------|------|-------------|
+| Variable   | Type     | Description             |
+| ---------- | -------- | ----------------------- |
 | `agent_id` | `string` | The ID of a Coder agent |
 
 ### Optional Variables
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `auth_tarball` | `string` | `""` | Base64 encoded, zstd compressed tarball of authenticated Amazon Q directory |
-| `amazon_q_version` | `string` | `"latest"` | Version of Amazon Q to install |
-| `install_amazon_q` | `bool` | `true` | Whether to install Amazon Q CLI |
-| `install_agentapi` | `bool` | `true` | Whether to install AgentAPI for web integration |
-| `agentapi_version` | `string` | `"v0.5.0"` | Version of AgentAPI to install |
-| `folder` | `string` | `"/home/coder"` | Working directory for Amazon Q |
-| `trust_all_tools` | `bool` | `true` | Whether to trust all tools in Amazon Q |
-| `ai_prompt` | `string` | `""` | Initial task prompt to send to Amazon Q |
-| `system_prompt` | `string` | *See below* | System prompt for task reporting behavior |
-| `pre_install_script` | `string` | `null` | Script to run before installing Amazon Q |
-| `post_install_script` | `string` | `null` | Script to run after installing Amazon Q |
-| `agent_config` | `string` | `null` | Custom agent configuration JSON (See the [Default Agent configuration](#default-agent-configuration))|
+| Variable              | Type     | Default         | Description                                                                                           |
+| --------------------- | -------- | --------------- | ----------------------------------------------------------------------------------------------------- |
+| `auth_tarball`        | `string` | `""`            | Base64 encoded, zstd compressed tarball of authenticated Amazon Q directory                           |
+| `amazon_q_version`    | `string` | `"latest"`      | Version of Amazon Q to install                                                                        |
+| `install_amazon_q`    | `bool`   | `true`          | Whether to install Amazon Q CLI                                                                       |
+| `install_agentapi`    | `bool`   | `true`          | Whether to install AgentAPI for web integration                                                       |
+| `agentapi_version`    | `string` | `"v0.5.0"`      | Version of AgentAPI to install                                                                        |
+| `folder`              | `string` | `"/home/coder"` | Working directory for Amazon Q                                                                        |
+| `trust_all_tools`     | `bool`   | `true`          | Whether to trust all tools in Amazon Q                                                                |
+| `ai_prompt`           | `string` | `""`            | Initial task prompt to send to Amazon Q                                                               |
+| `system_prompt`       | `string` | _See below_     | System prompt for task reporting behavior                                                             |
+| `pre_install_script`  | `string` | `null`          | Script to run before installing Amazon Q                                                              |
+| `post_install_script` | `string` | `null`          | Script to run after installing Amazon Q                                                               |
+| `agent_config`        | `string` | `null`          | Custom agent configuration JSON (See the [Default Agent configuration](#default-agent-configuration)) |
 
 ### UI Configuration
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `order` | `number` | `null` | Position in UI (lower numbers appear first) |
-| `group` | `string` | `null` | Group name for organizing apps |
-| `icon` | `string` | `"/icon/amazon-q.svg"` | Icon to display in UI |
+| Variable | Type     | Default                | Description                                 |
+| -------- | -------- | ---------------------- | ------------------------------------------- |
+| `order`  | `number` | `null`                 | Position in UI (lower numbers appear first) |
+| `group`  | `string` | `null`                 | Group name for organizing apps              |
+| `icon`   | `string` | `"/icon/amazon-q.svg"` | Icon to display in UI                       |
 
 ### Default System Prompt
 
 The module includes a comprehensive system prompt that instructs Amazon Q:
+
 ```
 You are a helpful Coding assistant. Aim to autonomously investigate
 and solve issues the user gives you and test your work, whenever possible.
@@ -157,7 +164,6 @@ Task summaries MUST:
 
 You can customize this behavior by providing your own system prompt via the `system_prompt` variable.
 
-
 ## Default Agent Configuration
 
 The module includes a default agent configuration template that provides a comprehensive setup for Amazon Q integration:
@@ -168,17 +174,9 @@ The module includes a default agent configuration template that provides a compr
   "description": "This is an default agent config",
   "prompt": "${system_prompt}",
   "mcpServers": {},
-  "tools": [
-    "fs_read",
-    "fs_write",
-    "execute_bash",
-    "use_aws",
-    "knowledge"
-  ],
+  "tools": ["fs_read", "fs_write", "execute_bash", "use_aws", "knowledge"],
   "toolAliases": {},
-  "allowedTools": [
-    "fs_read"
-  ],
+  "allowedTools": ["fs_read"],
   "resources": [
     "file://AmazonQ.md",
     "file://README.md",
@@ -233,14 +231,14 @@ module "amazon-q" {
   version      = "2.0.0"
   agent_id     = coder_agent.example.id
   auth_tarball = var.amazon_q_auth_tarball
-  
+
   pre_install_script = <<-EOT
     #!/bin/bash
     echo "Setting up custom environment..."
     # Install additional dependencies
     sudo apt-get update && sudo apt-get install -y zstd
   EOT
-  
+
   post_install_script = <<-EOT
     #!/bin/bash
     echo "Configuring Amazon Q settings..."
@@ -254,12 +252,12 @@ module "amazon-q" {
 
 ```tf
 module "amazon-q" {
-  source            = "registry.coder.com/coder/amazon-q/coder"
-  version           = "2.0.0"
-  agent_id          = coder_agent.example.id
-  auth_tarball      = var.amazon_q_auth_tarball
-  amazon_q_version  = "1.14.0"  # Specific version
-  install_amazon_q  = true
+  source           = "registry.coder.com/coder/amazon-q/coder"
+  version          = "2.0.0"
+  agent_id         = coder_agent.example.id
+  auth_tarball     = var.amazon_q_auth_tarball
+  amazon_q_version = "1.14.0" # Specific version
+  install_amazon_q = true
 }
 ```
 
@@ -271,7 +269,7 @@ module "amazon-q" {
   version      = "2.0.0"
   agent_id     = coder_agent.example.id
   auth_tarball = var.amazon_q_auth_tarball
-  
+
   agent_config = jsonencode({
     name        = "custom-agent"
     description = "Custom Amazon Q agent for my workspace"
@@ -289,15 +287,13 @@ module "amazon-q" {
   version      = "2.0.0"
   agent_id     = coder_agent.example.id
   auth_tarball = var.amazon_q_auth_tarball
-  
+
   # UI configuration
   order = 1
   group = "AI Tools"
   icon  = "/icon/custom-amazon-q.svg"
 }
 ```
-
-
 
 ## Architecture
 
@@ -331,6 +327,7 @@ module "amazon-q" {
 ### Common Issues
 
 **Amazon Q not found after installation:**
+
 ```bash
 # Check if Amazon Q is in PATH
 which q
@@ -339,11 +336,13 @@ export PATH="$PATH:$HOME/.local/bin"
 ```
 
 **Authentication issues:**
+
 - Regenerate the auth tarball on your local machine
 - Ensure the tarball is properly base64 encoded
 - Check that the original authentication is still valid
 
 **MCP integration not working:**
+
 - Verify that AgentAPI is installed (`install_agentapi = true`)
 - Check that the Coder agent is properly configured
 - Review the system prompt configuration
@@ -351,6 +350,7 @@ export PATH="$PATH:$HOME/.local/bin"
 ### Debug Mode
 
 Enable verbose logging by setting environment variables:
+
 ```bash
 export DEBUG=1
 export VERBOSE=1
