@@ -19,7 +19,8 @@
   "resources": [
     "file://AmazonQ.md",
     "file://README.md",
-    "file://.amazonq/rules/**/*.md"
+    "file://.amazonq/rules/**/*.md",
+    "file://AGENTS.md"
   ],
   "hooks": {},
   "toolsSettings": {},
