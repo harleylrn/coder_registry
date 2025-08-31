@@ -5,7 +5,7 @@ set -o errexit
 set -o pipefail
 
 command_exists() {
-  command -v "$1" > /dev/null 2>&1
+  command -v "$1" >/dev/null 2>&1
 }
 
 # Inputs
@@ -54,16 +54,16 @@ function install_amazon_q() {
 
     ARCH="$(uname -m)"
     case "$ARCH" in
-      "x86_64")
-        Q_URL="${ARG_Q_INSTALL_URL}/${ARG_VERSION}/q-x86_64-linux.zip"
-        ;;
-      "aarch64" | "arm64")
-        Q_URL="${ARG_Q_INSTALL_URL}/${ARG_VERSION}/q-aarch64-linux.zip"
-        ;;
-      *)
-        echo "Error: Unsupported architecture: $ARCH. Amazon Q only supports x86_64 and arm64."
-        exit 1
-        ;;
+    "x86_64")
+      Q_URL="${ARG_Q_INSTALL_URL}/${ARG_VERSION}/q-x86_64-linux.zip"
+      ;;
+    "aarch64" | "arm64")
+      Q_URL="${ARG_Q_INSTALL_URL}/${ARG_VERSION}/q-aarch64-linux.zip"
+      ;;
+    *)
+      echo "Error: Unsupported architecture: $ARCH. Amazon Q only supports x86_64 and arm64."
+      exit 1
+      ;;
     esac
 
     echo "Downloading Amazon Q for $ARCH from $Q_URL..."
@@ -95,7 +95,7 @@ function extract_auth_tarball() {
   if [ -n "$ARG_AUTH_TARBALL" ]; then
     echo "Extracting auth tarball..."
     PREV_DIR="$PWD"
-    echo "$ARG_AUTH_TARBALL" | base64 -d > /tmp/auth.tar.zst
+    echo "$ARG_AUTH_TARBALL" | base64 -d >/tmp/auth.tar.zst
     rm -rf ~/.local/share/amazon-q
     mkdir -p ~/.local/share/amazon-q
     cd ~/.local/share/amazon-q
@@ -117,31 +117,31 @@ function configure_agent() {
   if [ -n "$ARG_AGENT_CONFIG_DECODED" ]; then
     echo "Applying custom MCP configuration..."
     # Use agent name as filename for the configuration
-    echo "$ARG_AGENT_CONFIG_DECODED" > "$AGENT_CONFIG_DIR/${ARG_AGENT_NAME}.json"
+    echo "$ARG_AGENT_CONFIG_DECODED" >"$AGENT_CONFIG_DIR/${ARG_AGENT_NAME}.json"
     echo "Custom configuration saved to $AGENT_CONFIG_DIR/${ARG_AGENT_NAME}.json"
   fi
-  if [ "$ARG_REPORT_TASKS" = "true" ]; then
-    echo "Configuring Amazon Q to report tasks via Coder MCP..."
-    q mcp add --name coder \
-      --command "coder" \
-      --agent "$ARG_AGENT_NAME" \
-      --args "exp,mcp,server,--allowed-tools,coder_report_task,${ALLOWED_TOOLS},--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
-      --env "CODER_MCP_APP_STATUS_SLUG=${ARG_CODER_MCP_APP_STATUS_SLUG}" \
-      --env "CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" \
-      --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
-      --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
-      --force || echo "Warning: Failed to add Coder MCP server"
-  else
-    q mcp add --name coder \
-      --command "coder" \
-      --agent "$ARG_AGENT_NAME" \
-      --args "exp,mcp,server,--allowed-tools,${ALLOWED_TOOLS}" \
-      --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
-      --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
-      --force || echo "Warning: Failed to add Coder MCP server"
-  fi
-    echo "Added Coder MCP server into $ARG_AGENT_NAME in Amazon Q configuration"
-    q settings chat.defaultAgent "$ARG_AGENT_NAME"
+  # if [ "$ARG_REPORT_TASKS" = "true" ]; then
+  echo "Configuring Amazon Q to report tasks via Coder MCP..."
+  q mcp add --name coder \
+    --command "coder" \
+    --agent "$ARG_AGENT_NAME" \
+    --args "exp,mcp,server,--allowed-tools,coder_report_task,${ALLOWED_TOOLS},--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
+    --env "CODER_MCP_APP_STATUS_SLUG=${ARG_CODER_MCP_APP_STATUS_SLUG}" \
+    --env "CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" \
+    --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
+    --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
+    --force || echo "Warning: Failed to add Coder MCP server"
+  # else
+  #   q mcp add --name coder \
+  #     --command "coder" \
+  #     --agent "$ARG_AGENT_NAME" \
+  #     --args "exp,mcp,server,--allowed-tools,${ALLOWED_TOOLS}" \
+  #     --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
+  #     --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
+  #     --force || echo "Warning: Failed to add Coder MCP server"
+  # fi
+  echo "Added Coder MCP server into $ARG_AGENT_NAME in Amazon Q configuration"
+  q settings chat.defaultAgent "$ARG_AGENT_NAME"
 }
 
 # Main execution
