@@ -18,8 +18,7 @@ ARG_AGENT_NAME=${ARG_AGENT_NAME:-default-agent}
 ARG_MODULE_DIR_NAME=${ARG_MODULE_DIR_NAME:-.aws/.amazonq}
 ARG_CODER_MCP_APP_STATUS_SLUG=${ARG_CODER_MCP_APP_STATUS_SLUG:-}
 ARG_CODER_MCP_INSTRUCTIONS=${ARG_CODER_MCP_INSTRUCTIONS:-}
-ARG_PRE_INSTALL_SCRIPT=${ARG_PRE_INSTALL_SCRIPT:-}
-ARG_POST_INSTALL_SCRIPT=${ARG_POST_INSTALL_SCRIPT:-}
+ARG_REPORT_TASKS=${ARG_REPORT_TASKS:-true}
 
 mkdir -p "$HOME/$ARG_MODULE_DIR_NAME"
 
@@ -41,25 +40,9 @@ echo "q_install_url: $ARG_Q_INSTALL_URL"
 echo "agent_name: $ARG_AGENT_NAME"
 echo "coder_mcp_app_status_slug: $ARG_CODER_MCP_APP_STATUS_SLUG"
 echo "module_dir_name: $ARG_MODULE_DIR_NAME"
-echo "auth_tarball_provided: $([ -n "$ARG_AUTH_TARBALL" ] && echo "yes" || echo "no")"
-echo "pre_install_script_provided: $([ -n "$ARG_PRE_INSTALL_SCRIPT" ] && echo "yes" || echo "no")"
-echo "post_install_script_provided: $([ -n "$ARG_POST_INSTALL_SCRIPT" ] && echo "yes" || echo "no")"
+echo "auth_tarball_provided: ${ARG_AUTH_TARBALL}"
+echo "report_tasks: ${ARG_REPORT_TASKS}"
 echo "--------------------------------"
-
-# Execute pre-install script if provided
-function pre_install() {
-  if [ -n "$ARG_PRE_INSTALL_SCRIPT" ]; then
-    echo "Executing pre-install script..."
-    # Decode base64 encoded script and execute it
-    echo "$ARG_PRE_INSTALL_SCRIPT" | base64 -d > /tmp/pre_install.sh
-    chmod +x /tmp/pre_install.sh
-    /tmp/pre_install.sh
-    rm -f /tmp/pre_install.sh
-    echo "Pre-install script completed successfully."
-  else
-    echo "No pre-install script provided, skipping..."
-  fi
-}
 
 # Install Amazon Q if requested
 function install_amazon_q() {
@@ -130,49 +113,40 @@ function configure_agent() {
   # Create Amazon Q agent configuration directory
   AGENT_CONFIG_DIR="$HOME/.aws/amazonq/cli-agents"
   mkdir -p "$AGENT_CONFIG_DIR"
-  if [ -n "$ARG_CODER_MCP_APP_STATUS_SLUG" ]; then
+  ALLOWED_TOOLS="coder_get_workspace,coder_create_workspace,coder_list_workspaces,coder_list_templates,coder_template_version_parameters,coder_get_authenticated_user,coder_create_workspace_build,coder_create_template_version,coder_get_workspace_agent_logs,coder_get_workspace_build_logs,coder_get_template_version_logs,coder_update_template_active_version,coder_upload_tar_file,coder_create_template,coder_delete_template,coder_workspace_bash"
+  if [ -n "$ARG_AGENT_CONFIG_DECODED" ]; then
+    echo "Applying custom MCP configuration..."
+    # Use agent name as filename for the configuration
+    echo "$ARG_AGENT_CONFIG_DECODED" > "$AGENT_CONFIG_DIR/${ARG_AGENT_NAME}.json"
+    echo "Custom configuration saved to $AGENT_CONFIG_DIR/${ARG_AGENT_NAME}.json"
+  fi
+  if [ "$ARG_REPORT_TASKS" = "true" ]; then
     echo "Configuring Amazon Q to report tasks via Coder MCP..."
-    # Apply custom MCP configuration if provided
-    if [ -n "$ARG_AGENT_CONFIG_DECODED" ]; then
-      echo "Applying custom MCP configuration..."
-      # Use agent name as filename for the configuration
-      echo "$ARG_AGENT_CONFIG_DECODED" > "$AGENT_CONFIG_DIR/${ARG_AGENT_NAME}.json"
-      echo "Custom configuration saved to $AGENT_CONFIG_DIR/${ARG_AGENT_NAME}.json"
-    fi
     q mcp add --name coder \
       --command "coder" \
-      --args "exp,mcp,server,--allowed-tools,coder_report_task,--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
+      --agent "$ARG_AGENT_NAME" \
+      --args "exp,mcp,server,--allowed-tools,coder_report_task,${ALLOWED_TOOLS},--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
       --env "CODER_MCP_APP_STATUS_SLUG=${ARG_CODER_MCP_APP_STATUS_SLUG}" \
       --env "CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" \
       --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
       --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
-      --agent "$ARG_AGENT_NAME" \
       --force || echo "Warning: Failed to add Coder MCP server"
+  else
+    q mcp add --name coder \
+      --command "coder" \
+      --agent "$ARG_AGENT_NAME" \
+      --args "exp,mcp,server,--allowed-tools,${ALLOWED_TOOLS}" \
+      --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
+      --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
+      --force || echo "Warning: Failed to add Coder MCP server"
+  fi
     echo "Added Coder MCP server into $ARG_AGENT_NAME in Amazon Q configuration"
     q settings chat.defaultAgent "$ARG_AGENT_NAME"
-  fi
-}
-
-# Execute post-install script if provided
-function post_install() {
-  if [ -n "$ARG_POST_INSTALL_SCRIPT" ]; then
-    echo "Executing post-install script..."
-    # Decode base64 encoded script and execute it
-    echo "$ARG_POST_INSTALL_SCRIPT" | base64 -d > /tmp/post_install.sh
-    chmod +x /tmp/post_install.sh
-    /tmp/post_install.sh
-    rm -f /tmp/post_install.sh
-    echo "Post-install script completed successfully."
-  else
-    echo "No post-install script provided, skipping..."
-  fi
 }
 
 # Main execution
-pre_install
 install_amazon_q
 extract_auth_tarball
 configure_agent
-post_install
 
 echo "Amazon Q installation and configuration complete!"
