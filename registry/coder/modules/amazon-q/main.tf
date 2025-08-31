@@ -92,8 +92,9 @@ variable "agentapi_version" {
 }
 
 variable "workdir" {
-  type = string
+  type        = string
   description = "The folder to run Amazon Q in."
+  default     = "/home/coder"
 }
 
 # ---------------------------------------------
