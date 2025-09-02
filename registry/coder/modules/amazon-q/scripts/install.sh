@@ -120,26 +120,28 @@ function configure_agent() {
     echo "$ARG_AGENT_CONFIG_DECODED" >"$AGENT_CONFIG_DIR/${ARG_AGENT_NAME}.json"
     echo "Custom configuration saved to $AGENT_CONFIG_DIR/${ARG_AGENT_NAME}.json"
   fi
-  # if [ "$ARG_REPORT_TASKS" = "true" ]; then
-  echo "Configuring Amazon Q to report tasks via Coder MCP..."
-  q mcp add --name coder \
-    --command "coder" \
-    --agent "$ARG_AGENT_NAME" \
-    --args "exp,mcp,server,--allowed-tools,coder_report_task,${ALLOWED_TOOLS},--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
-    --env "CODER_MCP_APP_STATUS_SLUG=${ARG_CODER_MCP_APP_STATUS_SLUG}" \
-    --env "CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" \
-    --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
-    --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
-    --force || echo "Warning: Failed to add Coder MCP server"
-  # else
-  #   q mcp add --name coder \
-  #     --command "coder" \
-  #     --agent "$ARG_AGENT_NAME" \
-  #     --args "exp,mcp,server,--allowed-tools,${ALLOWED_TOOLS}" \
-  #     --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
-  #     --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
-  #     --force || echo "Warning: Failed to add Coder MCP server"
-  # fi
+  if [ "$ARG_REPORT_TASKS" = "true" ]; then
+    echo "Configuring Amazon Q to report tasks via Coder MCP..."
+    q mcp add --name coder \
+      --command "coder" \
+      --agent "$ARG_AGENT_NAME" \
+      --args "exp,mcp,server,--allowed-tools,coder_report_task,--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
+      --env "CODER_MCP_APP_STATUS_SLUG=${ARG_CODER_MCP_APP_STATUS_SLUG}" \
+      --env "CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" \
+      --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
+      --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
+      --env "CODER_MCP_ALLOWED_TOOLS=${ALLOWED_TOOLS}" \
+      --force || echo "Warning: Failed to add Coder MCP server"
+  else
+    q mcp add --name coder \
+      --command "coder" \
+      --agent "$ARG_AGENT_NAME" \
+      --args "exp,mcp,server,--allowed-tools" \
+      --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
+      --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
+      --env "CODER_MCP_ALLOWED_TOOLS=${ALLOWED_TOOLS}" \
+      --force || echo "Warning: Failed to add Coder MCP server"
+  fi
   echo "Added Coder MCP server into $ARG_AGENT_NAME in Amazon Q configuration"
   q settings chat.defaultAgent "$ARG_AGENT_NAME"
 }

@@ -5,7 +5,7 @@ set -o errexit
 set -o pipefail
 
 command_exists() {
-  command -v "$1" > /dev/null 2>&1
+  command -v "$1" >/dev/null 2>&1
 }
 
 # Decode inputs
@@ -14,7 +14,7 @@ ARG_TRUST_ALL_TOOLS=${ARG_TRUST_ALL_TOOLS:-true}
 ARG_MODULE_DIR_NAME=${ARG_MODULE_DIR_NAME:-.aws/amazonq}
 ARG_WORKDIR=${ARG_WORKDIR:-"$HOME"}
 ARG_REPORT_TASKS=${ARG_REPORT_TASKS:-true}
-
+ARG_SERVER_PARAMETERS=${ARG_SERVER_PARAMETERS:-""}
 
 echo "--------------------------------"
 echo "ai_prompt: $ARG_AI_PROMPT"
@@ -63,6 +63,5 @@ if [ -n "$ARG_AI_PROMPT" ]; then
   ARGS+=("$PROMPT")
 fi
 
-
 # Use agentapi to manage the interactive session with initial prompt
-agentapi server --term-width 67 --term-height 1190 -- "$Q_CMD" "${ARGS[@]}"
+agentapi server --term-width 67 --term-height 1190 ${ARG_SERVER_PARAMETERS} -- "$Q_CMD" "${ARGS[@]}"

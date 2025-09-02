@@ -168,6 +168,12 @@ variable "agent_config" {
   default     = null
 }
 
+variable "agentapi_chat_based_path" {
+  type        = bool
+  description = "Whether to use chat-based path for AgentAPI.Required if CODER_WILDCARD_ACCESS_URL is not defined in coder deployment"
+  default     = true
+}
+
 # Expose status slug to the agent environment
 resource "coder_env" "status_slug" {
   agent_id = var.agent_id
@@ -196,10 +202,6 @@ locals {
     system_prompt = local.system_prompt
   })
 
-  # Use either custom agent config OR default, not merged
-  # Check if custom config is provided and valid
-  has_custom_config = var.agent_config != null && var.agent_config != ""
-
   # Choose the JSON string: use var.agent_config if provided, otherwise encode default
   agent_config = var.agent_config != null ? var.agent_config : local.default_agent_config
 
@@ -207,6 +209,8 @@ locals {
   agent_name = try(jsondecode(local.agent_config).name, "agent")
 
   full_prompt = var.ai_prompt != null ? "${var.ai_prompt}" : ""
+
+  server_chat_parameters = var.agentapi_chat_based_path ? "--chat-base-path /@${data.coder_workspace_owner.me.name}/${data.coder_workspace.me.name}.${var.agent_id}/apps/${local.app_slug}/chat" : ""
 }
 
 
@@ -240,6 +244,7 @@ module "agentapi" {
     ARG_AI_PROMPT='${base64encode(local.full_prompt)}' \
     ARG_MODULE_DIR_NAME='${local.module_dir_name}' \
     ARG_WORKDIR='${var.workdir}' \
+    ARG_SERVER_PARAMETERS="${local.server_chat_parameters}" \
     ARG_REPORT_TASKS='${var.report_tasks}' \
     /tmp/start.sh
   EOT
