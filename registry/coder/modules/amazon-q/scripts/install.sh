@@ -125,7 +125,7 @@ function configure_agent() {
     q mcp add --name coder \
       --command "coder" \
       --agent "$ARG_AGENT_NAME" \
-      --args "exp,mcp,server,--allowed-tools,coder_report_task,${ALLOWED_TOOLS}--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
+      --args "exp,mcp,server,--allowed-tools,coder_report_task,${ALLOWED_TOOLS},--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
       --env "CODER_MCP_APP_STATUS_SLUG=${ARG_CODER_MCP_APP_STATUS_SLUG}" \
       --env "CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" \
       --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
