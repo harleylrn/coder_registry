@@ -130,7 +130,6 @@ function configure_agent() {
       --env "CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" \
       --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
       --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
-      --env "CODER_MCP_ALLOWED_TOOLS=${ALLOWED_TOOLS}" \
       --force || echo "Warning: Failed to add Coder MCP server"
   else
     q mcp add --name coder \
@@ -139,7 +138,6 @@ function configure_agent() {
       --args "exp,mcp,server,--allowed-tools,coder_report_task" \
       --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
       --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
-      --env "CODER_MCP_ALLOWED_TOOLS=${ALLOWED_TOOLS}" \
       --force || echo "Warning: Failed to add Coder MCP server"
   fi
   echo "Added Coder MCP server into $ARG_AGENT_NAME in Amazon Q configuration"
