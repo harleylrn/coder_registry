@@ -113,7 +113,7 @@ function configure_agent() {
   # Create Amazon Q agent configuration directory
   AGENT_CONFIG_DIR="$HOME/.aws/amazonq/cli-agents"
   mkdir -p "$AGENT_CONFIG_DIR"
-  ALLOWED_TOOLS="coder_get_workspace,coder_create_workspace,coder_list_workspaces,coder_list_templates,coder_template_version_parameters,coder_get_authenticated_user,coder_create_workspace_build,coder_create_template_version,coder_get_workspace_agent_logs,coder_get_workspace_build_logs,coder_get_template_version_logs,coder_update_template_active_version,coder_upload_tar_file,coder_create_template,coder_delete_template,coder_workspace_bash"
+  ALLOWED_TOOLS="coder_get_workspace\,coder_create_workspace\,coder_list_workspaces\,coder_list_templates\,coder_template_version_parameters\,coder_get_authenticated_user\,coder_create_workspace_build\,coder_create_template_version\,coder_get_workspace_agent_logs\,coder_get_workspace_build_logs\,coder_get_template_version_logs\,coder_update_template_active_version\,coder_upload_tar_file\,coder_create_template\,coder_delete_template\,coder_workspace_bash"
   if [ -n "$ARG_AGENT_CONFIG_DECODED" ]; then
     echo "Applying custom MCP configuration..."
     # Use agent name as filename for the configuration
@@ -125,7 +125,7 @@ function configure_agent() {
     q mcp add --name coder \
       --command "coder" \
       --agent "$ARG_AGENT_NAME" \
-      --args "exp,mcp,server,--allowed-tools,coder_report_task,--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
+      --args "exp,mcp,server,--allowed-tools,coder_report_task,${ALLOWED_TOOLS}--instructions,'$ARG_CODER_MCP_INSTRUCTIONS_DECODED'" \
       --env "CODER_MCP_APP_STATUS_SLUG=${ARG_CODER_MCP_APP_STATUS_SLUG}" \
       --env "CODER_MCP_AI_AGENTAPI_URL=http://localhost:3284" \
       --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
@@ -136,7 +136,7 @@ function configure_agent() {
     q mcp add --name coder \
       --command "coder" \
       --agent "$ARG_AGENT_NAME" \
-      --args "exp,mcp,server,--allowed-tools" \
+      --args "exp,mcp,server,--allowed-tools ${ALLOWED_TOOLS}" \
       --env "CODER_AGENT_URL=${CODER_AGENT_URL}" \
       --env "CODER_AGENT_TOKEN=${CODER_AGENT_TOKEN}" \
       --env "CODER_MCP_ALLOWED_TOOLS=${ALLOWED_TOOLS}" \

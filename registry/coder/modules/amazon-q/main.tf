@@ -210,7 +210,7 @@ locals {
 
   full_prompt = var.ai_prompt != null ? "${var.ai_prompt}" : ""
 
-  server_chat_parameters = var.agentapi_chat_based_path ? "--chat-base-path /@${data.coder_workspace_owner.me.name}/${data.coder_workspace.me.name}.${var.agent_id}/apps/${local.app_slug}/chat" : ""
+  server_chat_parameters = var.agentapi_chat_based_path ? "--chat-base-path '/@${data.coder_workspace_owner.me.name}/${data.coder_workspace.me.name}.${var.agent_id}/apps/${local.app_slug}/chat'" : ""
 }
 
 

@@ -64,4 +64,4 @@ if [ -n "$ARG_AI_PROMPT" ]; then
 fi
 
 # Use agentapi to manage the interactive session with initial prompt
-agentapi server --term-width 67 --term-height 1190 ${ARG_SERVER_PARAMETERS} -- "$Q_CMD" "${ARGS[@]}"
+agentapi server ${ARG_SERVER_PARAMETERS} --term-width 67 --term-height 1190 -- "$Q_CMD" "${ARGS[@]}"
