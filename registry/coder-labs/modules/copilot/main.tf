@@ -3,7 +3,7 @@ terraform {
   required_providers {
     coder = {
       source  = "coder/coder"
-      version = ">= 2.7"
+      version = ">= 2.12"
     }
   }
 }
@@ -242,7 +242,7 @@ resource "coder_env" "github_token" {
 
 module "agentapi" {
   source  = "registry.coder.com/coder/agentapi/coder"
-  version = "1.2.0"
+  version = "2.0.0"
 
   agent_id             = var.agent_id
   folder               = local.workdir
@@ -300,3 +300,8 @@ module "agentapi" {
     /tmp/install.sh
   EOT
 }
+
+output "task_app_id" {
+  value = module.agentapi.task_app_id
+}
+
