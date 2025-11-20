@@ -82,7 +82,6 @@ check_existing_session() {
 }
 
 setup_github_authentication() {
-  export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
   echo "Setting up GitHub authentication..."
 
   if [ -n "${GITHUB_TOKEN:-}" ]; then

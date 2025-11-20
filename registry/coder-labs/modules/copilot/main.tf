@@ -203,6 +203,10 @@ locals {
   final_copilot_config = jsonencode(local.merged_copilot_config)
 
   task_reporting_prompt = <<-EOT
+CRITICAL: Call this tool immediately after receiving ANY user message to report task status. Rules: (1) Call FIRST before doing work - report what you will do with state='working'. (2) Be granular - report each step separately. (3) State 'working' = actively processing without needing user input. (4) State 'complete' = task 100% finished. (5) State 'failure' = need user input, missing info, or blocked. Example: User says 'fix the bug' -> call with state='working', description='Investigating authentication bug'. When done -> call with state='complete', description='Fixed token validation'. You MUST report on every interaction.
+  EOT
+
+  task_reporting_prompt2 = <<-EOT
 
 -- Task Reporting --
 Report all tasks to Coder, following these EXACT guidelines:
@@ -217,7 +221,10 @@ additional user input
 details, or encounter blockers
   EOT
 
-  final_system_prompt = var.report_tasks ? "<system>\n${var.system_prompt}${local.task_reporting_prompt}\n</system>" : "<system>\n${var.system_prompt}\n</system>"
+  final_system_prompt = "<system>\n${var.system_prompt}\n</system>"
+
+  # final_system_prompt = "<system>\n${var.system_prompt}\n</system>"
+  final_task_prompt = replace(local.task_reporting_prompt, "/[\r\n]/", "")
 }
 
 resource "coder_env" "mcp_app_status_slug" {
@@ -297,6 +304,7 @@ module "agentapi" {
     ARG_EXTERNAL_AUTH_ID='${var.external_auth_id}' \
     ARG_COPILOT_VERSION='${var.copilot_version}' \
     ARG_COPILOT_MODEL='${var.copilot_model}' \
+    ARG_CODER_MCP_INSTRUCTIONS='${base64encode(local.final_task_prompt)}' \
     /tmp/install.sh
   EOT
 }
