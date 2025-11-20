@@ -224,7 +224,7 @@ details, or encounter blockers
   final_system_prompt = "<system>\n${var.system_prompt}\n</system>"
 
   # final_system_prompt = "<system>\n${var.system_prompt}\n</system>"
-  final_task_prompt = replace(local.task_reporting_prompt, "/[\r\n]/", "")
+  final_task_prompt = jsonencode(replace(local.task_reporting_prompt, "/[\r\n]/", ""))
 }
 
 resource "coder_env" "mcp_app_status_slug" {
