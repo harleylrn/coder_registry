@@ -221,7 +221,12 @@ additional user input
 details, or encounter blockers
   EOT
 
-  final_system_prompt = "<system>\n${var.system_prompt}\n</system>"
+  final_system_prompt = <<-EOT
+  "<system>
+  ${var.system_prompt}
+  ${local.task_reporting_prompt2}
+  </system>"
+  EOT
 
   # final_system_prompt = "<system>\n${var.system_prompt}\n</system>"
   final_task_prompt = jsonencode(replace(local.task_reporting_prompt, "/[\r\n]/", ""))
