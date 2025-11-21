@@ -104,6 +104,7 @@ setup_copilot_config() {
 
   mkdir -p "$copilot_config_dir"
   mkdir -p "$agents_dir"
+  mkdir -p "$instructions_default_dir"
 
   if [ -n "$ARG_COPILOT_CONFIG" ]; then
     echo "Setting up Copilot configuration..."
