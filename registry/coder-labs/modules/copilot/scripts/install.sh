@@ -99,6 +99,8 @@ setup_copilot_config() {
   local mcp_config_file="$copilot_config_dir/mcp-config.json"
   local agents_dir="$copilot_config_dir/agents"
   local agent_file="$agents_dir/default.agent.md"
+  local instructions_default_dir="$HOME/.github"
+  local instructions_default_file="$instructions_default_dir/copilot-instructions.md"
 
   mkdir -p "$copilot_config_dir"
   mkdir -p "$agents_dir"
@@ -116,7 +118,7 @@ setup_copilot_config() {
     setup_mcp_config "$mcp_config_file"
 
     echo "Setting up default agent configuration..."
-    setup_agent_config "$agent_file"
+    setup_agent_config "$instructions_default_file"
   else
     echo "ERROR: No Copilot configuration provided"
     exit 1
@@ -219,11 +221,6 @@ setup_agent_config() {
 
   if [ -n "$system_prompt_decoded" ]; then
     cat >"$agent_file" <<EOF
----
-name: default
-description: Default development agent with Coder and GitHub
-tools: ['read', 'edit', 'search', 'shell', 'github/*', 'coder/*']
----
 $system_prompt_decoded
 EOF
     echo "Agent configuration created: $agent_file"
