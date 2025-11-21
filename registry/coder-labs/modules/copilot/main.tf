@@ -222,7 +222,7 @@ details, or encounter blockers
   EOT
 
   final_system_prompt = "${var.system_prompt}\n\n${local.task_reporting_prompt2}"
-  final_task_prompt   = local.task_reporting_prompt2
+  final_task_prompt   = local.task_reporting_prompt
 }
 
 resource "coder_env" "mcp_app_status_slug" {
