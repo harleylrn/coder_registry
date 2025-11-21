@@ -179,10 +179,10 @@ EOF
     "coder": {
       "command": "/tmp/coder-mcp-server.sh",
       "args": [],
-      "name": "Coder",
       "timeout": 3000,
       "type": "local",
       "tools": ["*"],
+      "trust": true
     }
   }
 }
