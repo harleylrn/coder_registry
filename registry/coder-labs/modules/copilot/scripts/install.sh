@@ -144,11 +144,11 @@ setup_mcp_config() {
 setup_coder_mcp_server() {
   local mcp_config_file="$1"
 
-  local coder_mcp_wrapper_script
-
-  ARG_CODER_MCP_INSTRUCTIONS_DECODED=""
+  local instructions_escaped=""
   if [ -n "$ARG_CODER_MCP_INSTRUCTIONS" ]; then
-    ARG_CODER_MCP_INSTRUCTIONS_DECODED=$(echo -n "$ARG_CODER_MCP_INSTRUCTIONS" | base64 -d)
+    local instructions_decoded
+    instructions_decoded=$(echo -n "$ARG_CODER_MCP_INSTRUCTIONS" | base64 -d)
+    instructions_escaped=$(printf '%s' "$instructions_decoded" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/g' | tr -d '\n' | sed 's/\\n$//')
   fi
 
   local coder_mcp_config
@@ -166,7 +166,7 @@ setup_coder_mcp_server() {
         "--allowed-tools",
         "coder_report_task",
         "--instructions",
-        "$ARG_CODER_MCP_INSTRUCTIONS_DECODED"
+        "$instructions_escaped"
       ],
       "tools": [ "*" ],
       "trust": true,
