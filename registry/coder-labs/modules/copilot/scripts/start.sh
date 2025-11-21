@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# source "$HOME"/.bashrc
-# export PATH="$HOME/.local/bin:$PATH"
-
 command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
@@ -26,14 +23,14 @@ validate_copilot_installation() {
   fi
 }
 
-build_initial_prompt() {
-  local initial_prompt=""
+build_ai_prompt() {
+  local ai_prompt=""
 
   if [ -n "$ARG_AI_PROMPT" ]; then
-    initial_prompt=$(printf '%s' "$ARG_AI_PROMPT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/g' | tr -d '\n' | sed 's/\\n$//')
+    ai_prompt=$(printf '%s' "$ARG_AI_PROMPT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/g' | tr -d '\n' | sed 's/\\n$//')
   fi
 
-  echo "$initial_prompt"
+  echo "$ai_prompt"
 }
 
 build_copilot_args() {
@@ -75,64 +72,22 @@ check_existing_session() {
   return 1
 }
 
-# setup_github_authentication() {
-#   echo "Setting up GitHub authentication..."
-#
-#   if [ -n "${GITHUB_TOKEN:-}" ]; then
-#     export GH_TOKEN="$GITHUB_TOKEN"
-#     echo "✓ Using GitHub token from module configuration"
-#     return 0
-#   fi
-#
-#   if command_exists coder; then
-#     local github_token
-#     if github_token=$(coder external-auth access-token "${ARG_EXTERNAL_AUTH_ID:-github}" 2>/dev/null); then
-#       if [ -n "$github_token" ] && [ "$github_token" != "null" ]; then
-#         export GITHUB_TOKEN="$github_token"
-#         export GH_TOKEN="$github_token"
-#         echo "✓ Using Coder external auth OAuth token"
-#         return 0
-#       fi
-#     fi
-#   fi
-#
-#   if command_exists gh && gh auth status >/dev/null 2>&1; then
-#     echo "✓ Using GitHub CLI OAuth authentication"
-#     return 0
-#   fi
-#
-#   echo "⚠ No GitHub authentication available"
-#   echo "  Copilot will prompt for login during first use"
-#   echo "  Use the '/login' command in Copilot to authenticate"
-#   return 0
-# }
-
 start_agentapi() {
   echo "Starting in directory: $ARG_WORKDIR"
   cd "$ARG_WORKDIR"
 
   build_copilot_args
-
-  # if check_existing_session; then
-  #   echo "Continuing latest Copilot session..."
-  #   if [ ${#COPILOT_ARGS[@]} -gt 0 ]; then
-  #     echo "Copilot arguments: ${COPILOT_ARGS[*]}"
-  #     agentapi server --type copilot --term-width 120 --term-height 40 -- copilot --continue "${COPILOT_ARGS[@]}"
-  #   else
-  #     agentapi server --type copilot --term-width 120 --term-height 40 -- copilot --continue
-  #   fi
-  # else
   echo "Starting new Copilot session..."
-  local initial_prompt
-  initial_prompt=$(build_initial_prompt)
+  local ai_prompt
+  ai_prompt=$(build_ai_prompt)
 
-  if [ -n "$initial_prompt" ]; then
+  if [ -n "$ai_prompt" ]; then
     echo "Using initial prompt with system context"
     if [ ${#COPILOT_ARGS[@]} -gt 0 ]; then
       echo "Copilot arguments: ${COPILOT_ARGS[*]}"
-      agentapi server -I="$initial_prompt" --term-width 120 --term-height 40 -- copilot "${COPILOT_ARGS[@]}"
+      agentapi server -I="$ai_prompt" --term-width 120 --term-height 40 -- copilot "${COPILOT_ARGS[@]}"
     else
-      agentapi server -I="$initial_prompt" --term-width 120 --term-height 40 -- copilot
+      agentapi server -I="$ai_prompt" --term-width 120 --term-height 40 -- copilot
     fi
   else
     if [ ${#COPILOT_ARGS[@]} -gt 0 ]; then
@@ -145,6 +100,5 @@ start_agentapi() {
   # fi
 }
 
-# setup_github_authentication
 validate_copilot_installation
 start_agentapi
