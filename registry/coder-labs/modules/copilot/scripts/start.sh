@@ -30,7 +30,7 @@ build_initial_prompt() {
   local initial_prompt=""
 
   if [ -n "$ARG_AI_PROMPT" ]; then
-    initial_prompt=$(printf '%s' "$ARG_AI_PROMPT" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    initial_prompt=$(printf '%s' "$ARG_AI_PROMPT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/g' | tr -d '\n' | sed 's/\\n$//')
   fi
 
   echo "$initial_prompt"
