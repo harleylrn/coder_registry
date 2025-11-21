@@ -97,7 +97,6 @@ start_agentapi() {
       agentapi server --term-width 120 --term-height 40 -- copilot
     fi
   fi
-  # fi
 }
 
 validate_copilot_installation

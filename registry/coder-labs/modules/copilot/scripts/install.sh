@@ -1,8 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-source "$HOME"/.bashrc
-
 command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
@@ -190,37 +188,6 @@ EOF
   )
 
   echo "$coder_mcp_config" >"$mcp_config_file"
-  #   coder_mcp_config=$(
-  #     cat <<EOF
-  # {
-  #   "mcpServers": {
-  #     "coder": {
-  #       "type": "local",
-  #       "command": "coder",
-  #       "args": [
-  #         "exp",
-  #         "mcp",
-  #         "server",
-  #         "--allowed-tools",
-  #         "coder_report_task",
-  #         "--instructions",
-  #         "$instructions_escaped"
-  #       ],
-  #       "tools": [ "*" ],
-  #       "trust": true,
-  #       "env": {
-  #         "CODER_MCP_APP_STATUS_SLUG": "${ARG_MCP_APP_STATUS_SLUG}",
-  #         "CODER_MCP_AI_AGENTAPI_URL": "http://localhost:3284",
-  #         "CODER_AGENT_URL": "${CODER_AGENT_URL}",
-  #         "CODER_AGENT_TOKEN": "${CODER_AGENT_TOKEN}"
-  #       }
-  #     }
-  #   }
-  # }
-  # EOF
-  #   )
-  #
-  # echo "$coder_mcp_config" >"$mcp_config_file"
 }
 
 add_custom_mcp_servers() {
