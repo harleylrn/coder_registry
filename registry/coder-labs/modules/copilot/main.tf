@@ -222,14 +222,12 @@ details, or encounter blockers
   EOT
 
   final_system_prompt = <<-EOT
-  "<system>
   ${var.system_prompt}
   ${local.task_reporting_prompt2}
-  </system>"
   EOT
 
   # final_system_prompt = "<system>\n${var.system_prompt}\n</system>"
-  final_task_prompt = replace(local.task_reporting_prompt2, "/[\r\n]/", "")
+  # final_task_prompt = replace(local.task_reporting_prompt2, "/[\r\n]/", "")
 }
 
 resource "coder_env" "mcp_app_status_slug" {
