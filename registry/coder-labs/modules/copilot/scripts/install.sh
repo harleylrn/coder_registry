@@ -155,30 +155,34 @@ setup_coder_mcp_server() {
   fi
 
   local coder_mcp_config
+  coder_mcp_wrapper_script=$(
+    cat <<EOF
+#!/usr/bin/env bash
+set -e
+
+export CODER_MCP_APP_STATUS_SLUG="${ARG_MCP_APP_STATUS_SLUG}"
+export CODER_MCP_AI_AGENTAPI_URL="http://localhost:3284"
+export CODER_AGENT_URL="${CODER_AGENT_URL}"
+export CODER_AGENT_TOKEN="${CODER_AGENT_TOKEN}"
+
+exec coder exp mcp server --allowed-tools coder_report_task --instructions $instructions_escaped
+EOF
+  )
+  echo "$coder_mcp_wrapper_script" >"/tmp/coder-mcp-server.sh"
+  chmod +x /tmp/coder-mcp-server.sh
+
+  local coder_mcp_config
   coder_mcp_config=$(
     cat <<EOF
 {
   "mcpServers": {
     "coder": {
+      "command": "/tmp/coder-mcp-server.sh",
+      "args": [],
+      "name": "Coder",
+      "timeout": 3000,
       "type": "local",
-      "command": "coder",
-      "args": [
-        "exp",
-        "mcp",
-        "server",
-        "--allowed-tools",
-        "coder_report_task",
-        "--instructions",
-        "$instructions_escaped"
-      ],
-      "tools": [ "*" ],
-      "trust": true,
-      "env": {
-        "CODER_MCP_APP_STATUS_SLUG": "${ARG_MCP_APP_STATUS_SLUG}",
-        "CODER_MCP_AI_AGENTAPI_URL": "http://localhost:3284",
-        "CODER_AGENT_URL": "${CODER_AGENT_URL}",
-        "CODER_AGENT_TOKEN": "${CODER_AGENT_TOKEN}"
-      }
+      "tools": ["*"],
     }
   }
 }
@@ -186,6 +190,37 @@ EOF
   )
 
   echo "$coder_mcp_config" >"$mcp_config_file"
+  #   coder_mcp_config=$(
+  #     cat <<EOF
+  # {
+  #   "mcpServers": {
+  #     "coder": {
+  #       "type": "local",
+  #       "command": "coder",
+  #       "args": [
+  #         "exp",
+  #         "mcp",
+  #         "server",
+  #         "--allowed-tools",
+  #         "coder_report_task",
+  #         "--instructions",
+  #         "$instructions_escaped"
+  #       ],
+  #       "tools": [ "*" ],
+  #       "trust": true,
+  #       "env": {
+  #         "CODER_MCP_APP_STATUS_SLUG": "${ARG_MCP_APP_STATUS_SLUG}",
+  #         "CODER_MCP_AI_AGENTAPI_URL": "http://localhost:3284",
+  #         "CODER_AGENT_URL": "${CODER_AGENT_URL}",
+  #         "CODER_AGENT_TOKEN": "${CODER_AGENT_TOKEN}"
+  #       }
+  #     }
+  #   }
+  # }
+  # EOF
+  #   )
+  #
+  # echo "$coder_mcp_config" >"$mcp_config_file"
 }
 
 add_custom_mcp_servers() {
