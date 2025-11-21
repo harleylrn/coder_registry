@@ -16,6 +16,7 @@ ARG_EXTERNAL_AUTH_ID=${ARG_EXTERNAL_AUTH_ID:-github}
 ARG_COPILOT_VERSION=${ARG_COPILOT_VERSION:-latest}
 ARG_COPILOT_MODEL=${ARG_COPILOT_MODEL:-claude-sonnet-4.5}
 ARG_CODER_MCP_INSTRUCTIONS=${ARG_CODER_MCP_INSTRUCTIONS:-}
+ARG_SYSTEM_PROMPT=${ARG_SYSTEM_PROMPT:-}
 
 validate_prerequisites() {
   if ! command_exists node; then
@@ -96,8 +97,11 @@ setup_copilot_config() {
   local copilot_config_dir="$HOME/.copilot"
   local copilot_config_file="$copilot_config_dir/config.json"
   local mcp_config_file="$copilot_config_dir/mcp-config.json"
+  local agents_dir="$copilot_config_dir/agents"
+  local agent_file="$agents_dir/default.agent.md"
 
   mkdir -p "$copilot_config_dir"
+  mkdir -p "$agents_dir"
 
   if [ -n "$ARG_COPILOT_CONFIG" ]; then
     echo "Setting up Copilot configuration..."
@@ -110,6 +114,9 @@ setup_copilot_config() {
 
     echo "Setting up MCP server configuration..."
     setup_mcp_config "$mcp_config_file"
+
+    echo "Setting up default agent configuration..."
+    setup_agent_config "$agent_file"
   else
     echo "ERROR: No Copilot configuration provided"
     exit 1
@@ -199,6 +206,27 @@ add_custom_mcp_servers() {
     "
   else
     echo "WARNING: jq and node not available, cannot merge custom MCP servers"
+  fi
+}
+
+setup_agent_config() {
+  local agent_file="$1"
+  local system_prompt_decoded=""
+
+  if [ -n "${ARG_SYSTEM_PROMPT:-}" ]; then
+    system_prompt_decoded=$(echo -n "$ARG_SYSTEM_PROMPT" | base64 -d 2>/dev/null || echo "")
+  fi
+
+  if [ -n "$system_prompt_decoded" ]; then
+    cat >"$agent_file" <<EOF
+---
+name: default
+description: Default development agent with Coder and GitHub
+tools: ['read', 'edit', 'search', 'shell', 'github/*', 'coder/*']
+---
+$system_prompt_decoded
+EOF
+    echo "Agent configuration created: $agent_file"
   fi
 }
 

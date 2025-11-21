@@ -229,7 +229,7 @@ details, or encounter blockers
   EOT
 
   # final_system_prompt = "<system>\n${var.system_prompt}\n</system>"
-  final_task_prompt = replace(local.task_reporting_prompt, "/[\r\n]/", "")
+  final_task_prompt = replace(local.task_reporting_prompt2, "/[\r\n]/", "")
 }
 
 resource "coder_env" "mcp_app_status_slug" {
@@ -310,6 +310,7 @@ module "agentapi" {
     ARG_COPILOT_VERSION='${var.copilot_version}' \
     ARG_COPILOT_MODEL='${var.copilot_model}' \
     ARG_CODER_MCP_INSTRUCTIONS='${base64encode(local.final_task_prompt)}' \
+    ARG_SYSTEM_PROMPT='${base64encode(local.final_system_prompt)}' \
     /tmp/install.sh
   EOT
 }
