@@ -165,7 +165,7 @@ export CODER_MCP_AI_AGENTAPI_URL="http://localhost:3284"
 export CODER_AGENT_URL="${CODER_AGENT_URL}"
 export CODER_AGENT_TOKEN="${CODER_AGENT_TOKEN}"
 
-exec coder exp mcp server --allowed-tools coder_report_task --instructions $instructions_escaped
+exec coder exp mcp server --allowed-tools coder_report_task --instructions "$instructions_escaped"
 EOF
   )
   echo "$coder_mcp_wrapper_script" >"/tmp/coder-mcp-server.sh"
