@@ -216,7 +216,7 @@ CRITICAL: Call this tool immediately after receiving ANY user message to report 
   4. **Be granular**: Each investigation step, file operation, or decision point needs reporting
   5. **Use correct states**:
      - "working": Actively processing, no user input needed
-     - "idle": Task completed successfully
+     - "complete": Task completed successfully
      - "failure": Need user input, missing details, or blocked
   6. **Never skip**: Even for simple queries like checking PRs/issues, report the task
   7. **Include context**: Summary should clearly describe what you're doing (max 160 chars)
@@ -225,7 +225,7 @@ CRITICAL: Call this tool immediately after receiving ANY user message to report 
   **Example flow:**
   - User: "Check PR #53"
   - First action: coder-coder_report_task(state="working", summary="Checking PR #53 status...")
-  - After check: coder-coder_report_task(state="idle", summary="PR #53 checked - merged successfully")
+  - After check: coder-coder_report_task(state="complete", summary="PR #53 checked - merged successfully")
   EOT
 
   final_system_prompt = "${var.system_prompt}\n\n${local.task_reporting_prompt2}"
