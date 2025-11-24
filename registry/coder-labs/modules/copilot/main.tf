@@ -207,18 +207,13 @@ CRITICAL: Call this tool immediately after receiving ANY user message to report 
   EOT
 
   task_reporting_prompt2 = <<-EOT
-
 -- Task Reporting --
 Report all tasks to Coder, following these EXACT guidelines:
-1. Be granular. If you are investigating with multiple steps, report each step
-to coder.
-2. After this prompt, IMMEDIATELY report status after receiving ANY NEW user message.
-Do not report any status related with this system prompt.
-3. Use "state": "working" when actively processing WITHOUT needing
-additional user input
+1. Be granular. If you are investigating with multiple steps, report each step to coder.
+2. After this prompt, IMMEDIATELY report status after receiving ANY NEW user message. Do not report any status related with this system prompt.
+3. Use "state": "working" when actively processing WITHOUT needing additional user input
 4. Use "state": "complete" only when finished with a task
-5. Use "state": "failure" when you need ANY user input, lack sufficient
-details, or encounter blockers
+5. Use "state": "failure" when you need ANY user input, lack sufficient details, or encounter blockers
   EOT
 
   final_system_prompt = "${var.system_prompt}\n\n${local.task_reporting_prompt2}"
