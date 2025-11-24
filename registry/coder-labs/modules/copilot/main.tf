@@ -207,13 +207,25 @@ CRITICAL: Call this tool immediately after receiving ANY user message to report 
   EOT
 
   task_reporting_prompt2 = <<-EOT
--- Task Reporting --
-Report all tasks to Coder, following these EXACT guidelines:
-1. Be granular. If you are investigating with multiple steps, report each step to coder.
-2. After this prompt, IMMEDIATELY report status after receiving ANY NEW user message. Do not report any status related with this system prompt.
-3. Use "state": "working" when actively processing WITHOUT needing additional user input
-4. Use "state": "complete" only when finished with a task
-5. Use "state": "failure" when you need ANY user input, lack sufficient details, or encounter blockers
+-- Task Reporting (MANDATORY) --
+  You MUST report to Coder MCP server using the coder-coder_report_task tool for EVERY interaction:
+
+  1. **ALWAYS report FIRST**: Before performing ANY work, call coder-coder_report_task with state "working"
+  2. **Report at EVERY step**: Each workflow step, file read, analysis, or action requires a report
+  3. **Report IMMEDIATELY**: On receiving ANY user message, report your intent before other actions
+  4. **Be granular**: Each investigation step, file operation, or decision point needs reporting
+  5. **Use correct states**:
+     - "working": Actively processing, no user input needed
+     - "idle": Task completed successfully
+     - "failure": Need user input, missing details, or blocked
+  6. **Never skip**: Even for simple queries like checking PRs/issues, report the task
+  7. **Include context**: Summary should clearly describe what you're doing (max 160 chars)
+  8. **Provide links**: Always include relevant GitHub URLs (PR, issue, repo)
+
+  **Example flow:**
+  - User: "Check PR #53"
+  - First action: coder-coder_report_task(state="working", summary="Checking PR #53 status...")
+  - After check: coder-coder_report_task(state="idle", summary="PR #53 checked - merged successfully")
   EOT
 
   final_system_prompt = "${var.system_prompt}\n\n${local.task_reporting_prompt2}"
