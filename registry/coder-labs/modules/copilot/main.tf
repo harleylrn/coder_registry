@@ -59,6 +59,32 @@ variable "system_prompt" {
   default     = "You are a helpful coding assistant that helps developers write, debug, and understand code. Provide clear explanations, follow best practices, and help solve coding problems efficiently."
 }
 
+variable "task_reporting_prompt" {
+  type        = string
+  description = "The task reporting instructions to append to the system prompt when report_tasks is enabled."
+  default     = <<-EOT
+-- Task Reporting (MANDATORY) --
+  You MUST report to Coder MCP server using the coder-coder_report_task tool for EVERY interaction:
+
+  1. **ALWAYS report FIRST**: Before performing ANY work, call coder-coder_report_task with state "working"
+  2. **Report at EVERY step**: Each workflow step, file read, analysis, or action requires a report
+  3. **Report IMMEDIATELY**: On receiving ANY user message, report your intent before other actions
+  4. **Be granular**: Each investigation step, file operation, or decision point needs reporting
+  5. **Use correct states**:
+     - "working": Actively processing, no user input needed
+     - "complete": Task completed successfully
+     - "failure": Need user input, missing details, or blocked
+  6. **Never skip**: Even for simple queries like checking PRs/issues, report the task
+  7. **Include context**: Summary should clearly describe what you're doing (max 160 chars)
+  8. **Provide links**: Always include relevant GitHub URLs (PR, issue, repo)
+
+  **Example flow:**
+  - User: "Check PR #53"
+  - First action: coder-coder_report_task(state="working", summary="Checking PR #53 status...")
+  - After check: coder-coder_report_task(state="complete", summary="PR #53 checked - merged successfully")
+  EOT
+}
+
 variable "trusted_directories" {
   type        = list(string)
   description = "Additional directories to trust for Copilot operations."
@@ -202,34 +228,7 @@ locals {
 
   final_copilot_config = jsonencode(local.merged_copilot_config)
 
-  task_reporting_prompt = <<-EOT
-CRITICAL: Call this tool immediately after receiving ANY user message to report task status. Rules: (1) Call FIRST before doing work - report what you will do with state='working'. (2) Be granular - report each step separately. (3) State 'working' = actively processing without needing user input. (4) State 'complete' = task 100% finished. (5) State 'failure' = need user input, missing info, or blocked. Example: User says 'fix the bug' -> call with state='working', description='Investigating authentication bug'. When done -> call with state='complete', description='Fixed token validation'. You MUST report on every interaction.
-  EOT
-
-  task_reporting_prompt2 = <<-EOT
--- Task Reporting (MANDATORY) --
-  You MUST report to Coder MCP server using the coder-coder_report_task tool for EVERY interaction:
-
-  1. **ALWAYS report FIRST**: Before performing ANY work, call coder-coder_report_task with state "working"
-  2. **Report at EVERY step**: Each workflow step, file read, analysis, or action requires a report
-  3. **Report IMMEDIATELY**: On receiving ANY user message, report your intent before other actions
-  4. **Be granular**: Each investigation step, file operation, or decision point needs reporting
-  5. **Use correct states**:
-     - "working": Actively processing, no user input needed
-     - "complete": Task completed successfully
-     - "failure": Need user input, missing details, or blocked
-  6. **Never skip**: Even for simple queries like checking PRs/issues, report the task
-  7. **Include context**: Summary should clearly describe what you're doing (max 160 chars)
-  8. **Provide links**: Always include relevant GitHub URLs (PR, issue, repo)
-
-  **Example flow:**
-  - User: "Check PR #53"
-  - First action: coder-coder_report_task(state="working", summary="Checking PR #53 status...")
-  - After check: coder-coder_report_task(state="complete", summary="PR #53 checked - merged successfully")
-  EOT
-
-  final_system_prompt = "${var.system_prompt}\n\n${local.task_reporting_prompt2}"
-  final_task_prompt   = local.task_reporting_prompt
+  final_system_prompt = "${var.system_prompt}\n\n${var.task_reporting_prompt}"
 }
 
 resource "coder_env" "mcp_app_status_slug" {
