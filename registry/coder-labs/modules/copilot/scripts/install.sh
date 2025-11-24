@@ -13,7 +13,6 @@ ARG_COPILOT_CONFIG=$(echo -n "${ARG_COPILOT_CONFIG:-}" | base64 -d 2>/dev/null |
 ARG_EXTERNAL_AUTH_ID=${ARG_EXTERNAL_AUTH_ID:-github}
 ARG_COPILOT_VERSION=${ARG_COPILOT_VERSION:-latest}
 ARG_COPILOT_MODEL=${ARG_COPILOT_MODEL:-claude-sonnet-4.5}
-ARG_CODER_MCP_INSTRUCTIONS=${ARG_CODER_MCP_INSTRUCTIONS:-}
 ARG_SYSTEM_PROMPT=${ARG_SYSTEM_PROMPT:-}
 
 validate_prerequisites() {
@@ -145,15 +144,7 @@ setup_mcp_config() {
 setup_coder_mcp_server() {
   local mcp_config_file="$1"
 
-  local instructions_escaped=""
-  if [ -n "$ARG_CODER_MCP_INSTRUCTIONS" ]; then
-    local instructions_decoded
-    instructions_decoded=$(echo -n "$ARG_CODER_MCP_INSTRUCTIONS" | base64 -d)
-    instructions_escaped=$(printf '%s' "$instructions_decoded" | sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/g' | tr -d '\n' | sed 's/\\n$//')
-  fi
-
-  local coder_mcp_config
-  coder_mcp_wrapper_script=$(
+  local coder_mcp_wrapper_script=$(
     cat <<EOF
 #!/usr/bin/env bash
 set -e
@@ -163,8 +154,7 @@ export CODER_MCP_AI_AGENTAPI_URL="http://localhost:3284"
 export CODER_AGENT_URL="${CODER_AGENT_URL}"
 export CODER_AGENT_TOKEN="${CODER_AGENT_TOKEN}"
 
-exec coder exp mcp server --allowed-tools coder_report_task 
-# --instructions "$instructions_escaped"
+exec coder exp mcp server --allowed-tools coder_report_task
 EOF
   )
   echo "$coder_mcp_wrapper_script" >"/tmp/coder-mcp-server.sh"
