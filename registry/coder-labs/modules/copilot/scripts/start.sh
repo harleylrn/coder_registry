@@ -7,7 +7,6 @@ command_exists() {
 
 ARG_WORKDIR=${ARG_WORKDIR:-"$HOME"}
 ARG_AI_PROMPT=$(echo -n "${ARG_AI_PROMPT:-}" | base64 -d 2>/dev/null || echo "")
-ARG_SYSTEM_PROMPT=$(echo -n "${ARG_SYSTEM_PROMPT:-}" | base64 -d 2>/dev/null || echo "")
 ARG_COPILOT_MODEL=${ARG_COPILOT_MODEL:-}
 ARG_ALLOW_ALL_TOOLS=${ARG_ALLOW_ALL_TOOLS:-false}
 ARG_ALLOW_TOOLS=${ARG_ALLOW_TOOLS:-}

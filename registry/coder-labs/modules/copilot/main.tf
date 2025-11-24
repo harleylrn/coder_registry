@@ -282,7 +282,6 @@ module "agentapi" {
     
     ARG_WORKDIR='${local.workdir}' \
     ARG_AI_PROMPT='${base64encode(var.ai_prompt)}' \
-    ARG_SYSTEM_PROMPT='${base64encode(local.final_system_prompt)}' \
     ARG_COPILOT_MODEL='${var.copilot_model}' \
     ARG_ALLOW_ALL_TOOLS='${var.allow_all_tools}' \
     ARG_ALLOW_TOOLS='${join(",", var.allow_tools)}' \
